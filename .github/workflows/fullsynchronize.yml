@@ -41,27 +41,59 @@ jobs:
       - name: Get all cache files with file hashes
         id: track-files
         run: |
-          $cacheFiles = [ordered]@{}
+          node -e "
+            const fs = require('fs');
+            const path = require('path');
+            const crypto = require('crypto');
+
+            function getAllFiles(dirPath, arrayOfFiles = []) {
+              if (!fs.existsSync(dirPath)) return arrayOfFiles;
           
-          $allCacheFiles = Get-ChildItem -Path "cache" -File -Recurse -ErrorAction SilentlyContinue
+              const files = fs.readdirSync(dirPath);
           
-          $sortedFiles = $allCacheFiles | Sort-Object Name
+              files.forEach(file => {
+                const fullPath = path.join(dirPath, file);
+                if (fs.statSync(fullPath).isDirectory()) {
+                  arrayOfFiles = getAllFiles(fullPath, arrayOfFiles);
+                } else {
+                  arrayOfFiles.push(fullPath);
+                }
+              });
           
-          foreach ($file in $sortedFiles) {
-            $hash = Get-FileHash -Path $file.FullName -Algorithm SHA256 | Select-Object -ExpandProperty Hash
+              return arrayOfFiles;
+            }
+
+            function getFileHash(filePath) {
+              const fileBuffer = fs.readFileSync(filePath);
+              const hashSum = crypto.createHash('sha256');
+              hashSum.update(fileBuffer);
+              return hashSum.digest('hex');
+            }
           
-            $relativePath = $file.FullName.Replace("$PWD\", "").Replace("\", "/")
-            $cacheFiles[$relativePath] = $hash
-          }
+            const cachePath = 'cache';
+            const cacheFiles = {};
           
-          $trackingData = [ordered]@{
-            sync_timestamp = Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ"
-            generated_at = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-            cache_files = $cacheFiles
-          }
+            if (fs.existsSync(cachePath)) {
+              let allCacheFiles = getAllFiles(cachePath);
+
+              allCacheFiles.sort((a, b) => path.basename(a).localeCompare(path.basename(b)));
           
-          $trackingData | ConvertTo-Json -Depth 4 | Out-File "sync_tracking.json"
-          echo "Tracked $($cacheFiles.Count) cache files with hashes"
+              allCacheFiles.forEach(file => {
+                const hash = getFileHash(file);
+                const relativePath = path.relative(process.cwd(), file).replace(/\\/g, '/');
+                cacheFiles[relativePath] = hash;
+              });
+            }
+          
+            const trackingData = {
+              sync_timestamp: new Date().toISOString(),
+              generated_at: new Date().toLocaleString('en-US', { timeZone: 'UTC' }),
+              cache_files: cacheFiles
+            };
+          
+            fs.writeFileSync('sync_tracking.json', JSON.stringify(trackingData, null, 2));
+            console.log(`Tracked \${Object.keys(cacheFiles).length} cache files with hashes`);
+          "
 
       - name: Commit changes to main branch
         uses: stefanzweifel/git-auto-commit-action@v5
@@ -73,21 +105,21 @@ jobs:
 
       - name: Force push tracking to release branch
         run: |
-          if (Test-Path sync_tracking.json) {
-            $trackingContent = Get-Content sync_tracking.json -Raw
-            git checkout release 2>$null || git checkout --orphan release
+          if [ -f sync_tracking.json ]; then
+            trackingContent=$(cat sync_tracking.json)
+            git checkout release 2>/dev/null || git checkout --orphan release
             git rm -rf --quiet .
-            $trackingContent | Out-File "modified_files_tracking.json" -Encoding UTF8
+            echo "$trackingContent" > modified_files_tracking.json
           
             git add modified_files_tracking.json
             git config user.name "github-actions"
             git config user.email "github-actions@github.com"
-            git commit -m "Sync tracking: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss UTC')"
+            git commit -m "Sync tracking: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
           
             git push origin release --force
             echo "Force pushed tracking data to release branch"
           
             git checkout main
-          } else {
+          else
             echo "No tracking data generated"
-          }
+          fi
