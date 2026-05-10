@@ -1,4 +1,4 @@
-name: Release partial only synchronization
+name: Release synchronization
 
 on:
   #schedule:
