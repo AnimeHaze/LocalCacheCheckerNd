@@ -1,4 +1,4 @@
-import {removeUrlSearchParams} from "./utils.js";
+import { removeUrlSearchParams } from "./utils.js";
 
 export function transformRelease(release) {
     const releaseEpisodes = {
@@ -92,3 +92,30 @@ export function transformFranchise(f) {
     }
 }
 
+export function transformSchedule (item) {
+    return { [item.release.id]: item.release.publish_day.value }
+}
+
+export function transformSeasons(season) {
+    return {
+        value: season.value,
+        description: season.description,
+        label: season.label ?? ''
+    }
+}
+
+export function transformTypes(typ) {
+    return {
+        value: typ.value,
+        description: typ.description,
+        label: typ.label ?? ''
+    }
+}
+
+export function transformAge (age) {
+    return {
+        value: age.value,
+        description: age.description,
+        label: age.label ?? ''
+    }
+}

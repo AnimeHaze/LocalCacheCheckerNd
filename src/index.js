@@ -2,8 +2,26 @@ import fsp from 'node:fs/promises'
 import path from 'node:path'
 import PQueue from 'p-queue'
 import { chunkArray, fileSize } from './utils.js'
-import {fetchCatalog, fetchFranchise, fetchFranchises, fetchReleases} from './api.js'
-import {transformEpisode, transformFranchise, transformRelease, transformTorrent} from './transformers.js'
+
+import {
+    fetchAgeRatings,
+    fetchCatalog,
+    fetchFranchise,
+    fetchFranchises,
+    fetchGenres,
+    fetchReleases,
+    fetchSchedule,
+    fetchSeasons, fetchTypes
+} from './api.js'
+
+import {
+    transformAge,
+    transformFranchise,
+    transformRelease,
+    transformSchedule,
+    transformSeasons,
+    transformTypes
+} from './transformers.js'
 
 const queue = new PQueue({ concurrency: 5 });
 
@@ -92,6 +110,8 @@ async function main() {
 
     await fsp.writeFile(path.join(cacheDir, 'torrents.json'), JSON.stringify(torrents))
 
+    await fsp.writeFile(path.join(cacheDir, 'ignored.json'), '[]')
+
     await fsp.writeFile(path.join(cacheDir, 'metadata'), JSON.stringify({
         "lastReleaseTimeStamp": new Date().getTime() / 1000,
         "countEpisodes": episodesChunksResult.length,
@@ -125,6 +145,45 @@ async function main() {
     await fsp.writeFile(path.join(cacheDir, 'releaseseries.json'), JSON.stringify(transformedFranchises))
 
     console.timeEnd('franchises')
+
+    console.time('schedule')
+
+    const transformedSchedule = []
+    const schedule = await fetchSchedule()
+
+    console.log('Fetched schedule', schedule.length)
+
+    for (const item of schedule) {
+        transformedSchedule.push(transformSchedule(item))
+    }
+
+    console.timeEnd('schedule')
+
+    await fsp.writeFile(path.join(cacheDir, 'schedule.json'), JSON.stringify(transformedSchedule))
+
+    const [
+        ageRatings,
+        genres,
+        seasons,
+        types
+    ] = await Promise.all([
+        fetchAgeRatings(),
+        fetchGenres(),
+        fetchSeasons(),
+        fetchTypes()
+    ])
+
+    console.log('Fetched ', ageRatings.length, 'age ratings')
+    console.log('Fetched ', genres.length, 'genres')
+    console.log('Fetched ', seasons.length, 'seasons')
+    console.log('Fetched ', types.length, 'types')
+
+    await fsp.writeFile(path.join(cacheDir, 'types.json'), JSON.stringify({
+        ageRatings: ageRatings.map(transformAge),
+        genres,
+        seasons: seasons.map(transformSeasons),
+        types: types.map(transformTypes)
+    }))
 
     const dirFiles = await fsp.readdir(cacheDir)
 
