@@ -1,0 +1,175 @@
+import fsp from 'node:fs/promises'
+import path from 'node:path'
+import PQueue from 'p-queue'
+import { chunkArray, fileSize } from './utils.js'
+import {fetchCatalog, fetchFranchise, fetchFranchises, fetchReleases} from './api.js'
+import {transformEpisode, transformFranchise, transformRelease, transformTorrent} from './transformers.js'
+
+const queue = new PQueue({ concurrency: 5 });
+
+const cacheDir = 'cache'
+
+async function main() {
+    console.time('releases')
+    const episodes = []
+    const torrents = []
+
+    const releases = await fetchFullCatalog()
+    const transformedReleases = []
+
+    const releasesChunks = chunkArray([...releases.values()], 50)
+    let totalFetched = 0
+
+    const missing = new Set()
+
+    for (let i = 0; i < releasesChunks.length; i++) {
+        const ids = releasesChunks[i]
+        await queue.add(async () => {
+
+            const missingLocal = new Set()
+
+            const chunkData = await fetchReleases(ids)
+            const fetchedCount = chunkData.data?.length || 0
+            totalFetched += fetchedCount
+
+            const receivedIds = new Set(chunkData.data?.map(r => r.id) || [])
+            const missingFromThisChunk = ids.filter(id => !receivedIds.has(id))
+            missingFromThisChunk.forEach(id => missingLocal.add(id))
+
+            console.log(`Fetched releases ${fetchedCount} / ${ids.length} (Total ${releases.size})`)
+
+            const successCount = totalFetched
+            const missingCount = missingLocal.size
+            const totalProcessed = successCount + missingCount
+            const ratio = successCount / releases.size
+
+            console.log(`Progress: (${successCount} fetched - ${missingCount} missing) / ${releases.size} = ${ratio.toFixed(4)} (${(ratio * 100).toFixed(2)}%)`)
+
+            for (const r of chunkData.data) {
+                const { release, releaseEpisodes, releaseTorrents} = transformRelease(r)
+
+
+                episodes.push(releaseEpisodes)
+                torrents.push(...releaseTorrents)
+                transformedReleases.push(release)
+            }
+
+            if (missingFromThisChunk.length > 0) {
+                console.log(`Some releases missing in list responses`, missingFromThisChunk.join(','))
+            }
+
+            missingLocal.forEach(id => missing.add(id))
+        })
+    }
+
+    const totalReleases = transformedReleases.length
+    const successRate = (totalFetched / totalReleases * 100).toFixed(2)
+    const lossRate = (missing.size / totalReleases * 100).toFixed(2)
+
+    console.log(`\n--------------------------\n`)
+    console.log(`Total releases in catalog: ${totalReleases}`)
+    console.log(`Successfully fetched: ${totalFetched} (${successRate}%)`)
+    console.log(`Missing (errors/problems): ${missing.size} (${lossRate}%)`)
+
+    if (missing.size > 0) {
+        console.log(`Missing release IDs: ${[...missing].join(',')}`)
+        await fsp.writeFile(path.join(cacheDir, 'missing_releases.json'), JSON.stringify({
+            count: missing.size,
+            ids: [...missing],
+            timestamp: new Date().toISOString()
+        }, null, 2))
+    }
+
+    const releasesChunksResult = chunkArray(transformedReleases, 300)
+    for (let i = 0; i < releasesChunksResult.length; i++) {
+        await fsp.writeFile(path.join(cacheDir, 'releases' + i + '.json'), JSON.stringify(releasesChunksResult[i]))
+    }
+
+    const episodesChunksResult = chunkArray(episodes, 200)
+    for (let i = 0; i < episodesChunksResult.length; i++) {
+        await fsp.writeFile(path.join(cacheDir, 'episodes' + i + '.json'), JSON.stringify(episodesChunksResult[i]))
+    }
+
+    await fsp.writeFile(path.join(cacheDir, 'torrents.json'), JSON.stringify(torrents))
+
+    await fsp.writeFile(path.join(cacheDir, 'metadata'), JSON.stringify({
+        "lastReleaseTimeStamp": new Date().getTime() / 1000,
+        "countEpisodes": episodesChunksResult.length,
+        "countReleases": releasesChunks.length
+    }))
+
+    console.timeEnd('releases')
+
+    console.time('franchises')
+
+    const transformedFranchises = []
+
+    const franchisesIds = await fetchFranchises()
+        .then(x => [...new Set([...x.map(y => y.id)]).values()])
+
+    const chunks = chunkArray(franchisesIds, 50)
+
+    console.log('Fetched', franchisesIds.length, 'franchises')
+
+    for (const chunk of chunks) {
+        for (const fid of chunk) {
+            console.log('Fetching franchise', fid)
+            const franchise = await fetchFranchise(fid)
+
+            transformedFranchises.push(transformFranchise(franchise))
+        }
+
+        await new Promise(resolve => setTimeout(resolve, 4000))
+    }
+
+    await fsp.writeFile(path.join(cacheDir, 'releaseseries.json'), JSON.stringify(transformedFranchises))
+
+    console.timeEnd('franchises')
+
+    const dirFiles = await fsp.readdir(cacheDir)
+
+    const table = []
+
+    for (const file of dirFiles) {
+        const stats = await fsp.stat(path.join(cacheDir, file))
+
+        table.push([file, fileSize(stats.size)])
+    }
+
+    console.table(table)
+}
+
+main()
+
+/**
+ * Fetches full catalog from API
+ * @returns {Promise<Set<string>>}
+ */
+async function fetchFullCatalog() {
+    let totalReleaseLast = 0
+    const allReleases = new Set()
+
+    const firstPage = await fetchCatalog(1)
+
+    const totalPages = firstPage.meta.pagination.total_pages
+
+    console.log(`Total releases: ${firstPage.meta.pagination.total}`)
+    console.log(`Total pages: ${totalPages}`)
+
+    for (let page = 1; page <= totalPages; page++) {
+        console.log(`Fetch page ${page} / ${totalPages}`)
+
+        const releases = await fetchCatalog(page)
+
+        for (const release of releases.data) {
+            allReleases.add(release.id)
+        }
+
+        totalReleaseLast = firstPage.meta.pagination.total
+    }
+
+    console.log(`Total ${allReleases.size}. Total in catalog ${totalReleaseLast}`)
+
+    return allReleases
+}
+
