@@ -27,6 +27,31 @@ const queue = new PQueue({ concurrency: 5 });
 
 const cacheDir = 'cache'
 
+function gitifyJSONArray(arr, key) {
+    if (!arr || !Array.isArray(arr) || arr.length === 0) {
+        return '[\n]';
+    }
+
+    const sortedArr = [...arr].sort((a, b) => {
+        const aValue = a[key];
+        const bValue = b[key];
+
+        if (typeof aValue === 'number' && typeof bValue === 'number') {
+            return aValue - bValue;
+        }
+
+        if (typeof aValue === 'string' && typeof bValue === 'string') {
+            return aValue.localeCompare(bValue);
+        }
+
+        if (aValue < bValue) return -1;
+        if (aValue > bValue) return 1;
+        return 0;
+    });
+
+    return '[\n' + sortedArr.map(x => JSON.stringify(x)).join(',\n') + '\n]' + '\n';
+}
+
 async function main() {
     console.time('releases')
     const episodes = []
@@ -35,7 +60,7 @@ async function main() {
     const releases = await fetchFullCatalog()
     const transformedReleases = []
 
-    const releasesChunks = chunkArray([...releases.values()], 50)
+    const releasesChunks = chunkArray([...releases.values()].sort((a, b) => a.id - b.id), 50)
     let totalFetched = 0
 
     const missing = new Set()
@@ -100,15 +125,15 @@ async function main() {
 
     const releasesChunksResult = chunkArray(transformedReleases, 300)
     for (let i = 0; i < releasesChunksResult.length; i++) {
-        await fsp.writeFile(path.join(cacheDir, 'releases' + i + '.json'), JSON.stringify(releasesChunksResult[i]))
+        await fsp.writeFile(path.join(cacheDir, 'releases' + i + '.json'), gitifyJSONArray(releasesChunksResult[i], 'id'))
     }
 
-    const episodesChunksResult = chunkArray(episodes, 200)
+    const episodesChunksResult = chunkArray(episodes.sort((a, b) => a.releaseId - a.releaseId), 200)
     for (let i = 0; i < episodesChunksResult.length; i++) {
-        await fsp.writeFile(path.join(cacheDir, 'episodes' + i + '.json'), JSON.stringify(episodesChunksResult[i]))
+        await fsp.writeFile(path.join(cacheDir, 'episodes' + i + '.json'), gitifyJSONArray(episodesChunksResult[i], 'releaseId'))
     }
 
-    await fsp.writeFile(path.join(cacheDir, 'torrents.json'), JSON.stringify(torrents))
+    await fsp.writeFile(path.join(cacheDir, 'torrents.json'), gitifyJSONArray(torrents, 'releaseId'))
 
     await fsp.writeFile(path.join(cacheDir, 'ignored.json'), '[]')
 
@@ -142,7 +167,7 @@ async function main() {
         await new Promise(resolve => setTimeout(resolve, 4000))
     }
 
-    await fsp.writeFile(path.join(cacheDir, 'releaseseries.json'), JSON.stringify(transformedFranchises))
+    await fsp.writeFile(path.join(cacheDir, 'releaseseries.json'), gitifyJSONArray(transformedFranchises, 'title'))
 
     console.timeEnd('franchises')
 
