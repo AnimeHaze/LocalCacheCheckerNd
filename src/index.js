@@ -22,6 +22,8 @@ import {
     transformSeasons,
     transformTypes
 } from './transformers.js'
+import { enrichRelease } from "./anilist/enrich.js"
+import { AniListClient } from "./anilist/client.js"
 
 const queue = new PQueue({ concurrency: 5 });
 
@@ -210,13 +212,82 @@ async function main() {
         types: types.map(transformTypes)
     }))
 
+    console.time('anilist')
+
+    const anilistFilesList = await fsp.readdir(cacheDir);
+    const anilistFiles = anilistFilesList.filter(f => f.startsWith('anilist') && f.endsWith('.json'));
+    const anilistCache = new Map();
+
+    for (const file of anilistFiles) {
+        const data = await fsp.readFile(path.join(cacheDir, file), 'utf-8')
+            .then(x => JSON.parse(x))
+
+        for (const item of data) {
+            anilistCache.set(item.id, item);
+        }
+    }
+
+    const anilibriaIdToCache = new Map();
+    for (const item of anilistCache.values()) {
+        if (item.anilibria_id) {
+            anilibriaIdToCache.set(item.anilibria_id, item);
+        }
+    }
+
+    const missingAnilistReleases = transformedReleases.filter(release => {
+        return !anilibriaIdToCache.has(release.id);
+    });
+
+    console.log(`Total releases (anilibria): ${transformedReleases.length}`);
+    console.log(`Already cached (anilibris - anilist): ${transformedReleases.length - missingAnilistReleases.length}`);
+    console.log(`Missing (anilist): ${missingAnilistReleases.length}`);
+
+    const anilistClient = new AniListClient()
+
+    for (const release of missingAnilistReleases) {
+        const enriched = await enrichRelease(
+            release,
+            anilistClient,
+            anilistCache
+        )
+
+        if (enriched) {
+            console.log(
+                'AniList enrich',
+                release.id,
+                release.title,
+                '→',
+                enriched.titles.english ||
+                enriched.titles.romaji
+            )
+
+            enriched.anilibria_id = release.id
+            anilistCache.set(enriched.id, enriched)
+        } else {
+            console.log(
+                'AniList enrich',
+                release.id,
+                release.title,
+                '| not found'
+            )
+        }
+    }
+
+    const enrichedReleases = [...anilistCache.values()].sort((a, b) => a.id - b.id)
+    const enrichedReleasesChunksResult = chunkArray(enrichedReleases, 300)
+
+    for (let i = 0; i < enrichedReleasesChunksResult.length; i++) {
+        await fsp.writeFile(path.join(cacheDir, 'anilist' + i + '.json'), gitifyJSONArray(enrichedReleasesChunksResult[i], 'id'))
+    }
+
+    console.timeEnd('anilist')
+
     const dirFiles = await fsp.readdir(cacheDir)
 
     const table = []
 
     for (const file of dirFiles) {
         const stats = await fsp.stat(path.join(cacheDir, file))
-
         table.push([file, fileSize(stats.size)])
     }
 
