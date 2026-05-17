@@ -37,7 +37,7 @@ export async function enrichRelease(
 
     const best = candidates[0]
 
-    if (!best || best.score < 0.3) {
+    if (!best || best.score < 0.72) {
         return null
     }
 
