@@ -63,6 +63,6 @@
 {"releaseId":10237,"items":[]},
 {"releaseId":10238,"items":[]},
 {"releaseId":10239,"items":[]},
-{"releaseId":10282,"items":[]},
-{"releaseId":10285,"items":[{"id":"a21042ea-cdf0-43f5-b89a-cd2b4c462c51","name":"","nameEnglish":"","updatedAt":"2026-06-19T22:37:10+00:00","ordinal":1,"sortOrder":1,"hls_480":"https://cache.libria.fun/videos/media/ts/10285/1/480/71a71e263061fe35a1f82a6de40579af.m3u8","duration":1498,"rutubeId":null,"youtubeId":null,"opening":{"stop":null,"start":null},"ending":{"stop":null,"start":null},"preview":{"src":"/storage/releases/episodes/previews/10285/1/7cO3UbTCchvi9Wg2.jpg"}}]}
+{"releaseId":10281,"items":[]},
+{"releaseId":10282,"items":[]}
 ]
