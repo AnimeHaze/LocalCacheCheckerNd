@@ -58,7 +58,7 @@
 {"releaseId":10232,"items":[]},
 {"releaseId":10233,"items":[]},
 {"releaseId":10234,"items":[]},
-{"releaseId":10235,"items":[]},
+{"releaseId":10235,"items":[{"id":"a22d7d7b-7977-4d3e-82ec-a649650c65e6","name":"Как устроен мир","nameEnglish":"","updatedAt":"2026-07-04T11:31:06+00:00","ordinal":1,"sortOrder":1,"hls_480":"https://cache.libria.fun/videos/media/ts/10235/1/480/4aab7153e1d0310890473de24cad917b.m3u8","hls_720":"https://cache.libria.fun/videos/media/ts/10235/1/720/2f3ac9c83d7cd89eedeaa57efc089979.m3u8","hls_1080":"https://cache.libria.fun/videos/media/ts/10235/1/1080/332eb0eafdbd2a3e554fd3655970a4ee.m3u8","duration":1430,"rutubeId":null,"youtubeId":null,"opening":{"stop":209,"start":121},"ending":{"stop":1428,"start":1340},"preview":{"src":"/storage/releases/episodes/previews/10235/1/4uE6gPwHZdiviiU8.jpg"}}]},
 {"releaseId":10236,"items":[]},
 {"releaseId":10237,"items":[]},
 {"releaseId":10238,"items":[]},
