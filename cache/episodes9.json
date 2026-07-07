@@ -54,7 +54,7 @@
 {"releaseId":10229,"items":[]},
 {"releaseId":10230,"items":[]},
 {"releaseId":10232,"items":[]},
-{"releaseId":10233,"items":[]},
+{"releaseId":10233,"items":[{"id":"a2340572-ef5d-4402-a193-95e5fa2f4b29","name":"В этот летний день всё и началось","nameEnglish":"","updatedAt":"2026-07-07T16:52:14+00:00","ordinal":1,"sortOrder":1,"duration":0,"rutubeId":null,"youtubeId":null,"opening":{"stop":145,"start":55},"ending":{"stop":1442,"start":1350},"preview":{"src":null}}]},
 {"releaseId":10234,"items":[]},
 {"releaseId":10236,"items":[]},
 {"releaseId":10238,"items":[]},
