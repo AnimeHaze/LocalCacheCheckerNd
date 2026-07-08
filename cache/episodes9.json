@@ -55,7 +55,7 @@
 {"releaseId":10230,"items":[]},
 {"releaseId":10232,"items":[]},
 {"releaseId":10233,"items":[{"id":"a2340572-ef5d-4402-a193-95e5fa2f4b29","name":"В этот летний день всё и началось","nameEnglish":"","updatedAt":"2026-07-07T16:52:14+00:00","ordinal":1,"sortOrder":1,"duration":0,"rutubeId":null,"youtubeId":null,"opening":{"stop":145,"start":55},"ending":{"stop":1442,"start":1350},"preview":{"src":null}}]},
-{"releaseId":10234,"items":[]},
+{"releaseId":10234,"items":[{"id":"a2357e00-217e-4d7f-9c55-a4fee04e741e","name":"","nameEnglish":"","updatedAt":"2026-07-08T10:25:09+00:00","ordinal":1,"sortOrder":1,"duration":0,"rutubeId":null,"youtubeId":null,"opening":{"stop":90,"start":1},"ending":{"stop":1418,"start":1329},"preview":{"src":null}}]},
 {"releaseId":10236,"items":[]},
 {"releaseId":10238,"items":[]},
 {"releaseId":10289,"items":[]}
