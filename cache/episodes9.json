@@ -58,5 +58,6 @@
 {"releaseId":10238,"items":[]},
 {"releaseId":10281,"items":[]},
 {"releaseId":10282,"items":[]},
-{"releaseId":10289,"items":[]}
+{"releaseId":10289,"items":[]},
+{"releaseId":10290,"items":[{"id":"a2381327-f26d-4412-be91-8e1d1ea5bf64","name":"Я — ЛУФФИ! ТОТ, КТО СТАНЕТ КОРОЛЁМ ПИРАТОВ!","nameEnglish":"","updatedAt":"2026-07-09T17:36:00+00:00","ordinal":1,"sortOrder":1,"duration":0,"rutubeId":null,"youtubeId":null,"opening":{"stop":125,"start":45},"ending":{"stop":1465,"start":1390},"preview":{"src":null}}]}
 ]
