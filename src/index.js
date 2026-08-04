@@ -142,7 +142,7 @@ async function main() {
     await fsp.writeFile(path.join(cacheDir, 'metadata'), JSON.stringify({
         "lastReleaseTimeStamp": Math.floor(new Date().getTime() / 1000),
         "countEpisodes": episodesChunksResult.length,
-        "countReleases": episodesChunksResult.length
+        "countReleases": releasesChunksResult.length
     }))
 
     console.timeEnd('releases')
