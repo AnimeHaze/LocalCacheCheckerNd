@@ -212,7 +212,7 @@ async function main() {
         types: types.map(transformTypes)
     }))
 
-    console.time('anilist')
+    /*console.time('anilist')
 
     const anilistFilesList = await fsp.readdir(cacheDir);
     const anilistFiles = anilistFilesList.filter(f => f.startsWith('anilist') && f.endsWith('.json'));
@@ -280,7 +280,7 @@ async function main() {
         await fsp.writeFile(path.join(cacheDir, 'anilist' + i + '.json'), gitifyJSONArray(enrichedReleasesChunksResult[i], 'id'))
     }
 
-    console.timeEnd('anilist')
+    console.timeEnd('anilist')*/
 
     const dirFiles = await fsp.readdir(cacheDir)
 
